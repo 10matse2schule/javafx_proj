@@ -1,2 +1,4 @@
-# javafx_proj
-a javafx project for learning to collaborate at school
+# School Project
+
+Just doing a small group project for school.
+Don't know, what it will be.
