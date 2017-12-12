@@ -42,7 +42,7 @@ public class MainApp extends Application {
         personData.add(new Person("Hans", "Muster"));
         personData.add(new Person("Ruth", "Mueller"));
         personData.add(new Person("Heinz", "Kurz"));
-        personData.add(new Person("Cornelia", "Meier"));
+        personData.add(new Person("Cornelia", "Maier"));
         personData.add(new Person("Werner", "Meyer"));
         personData.add(new Person("Lydia", "Kunz"));
         personData.add(new Person("Anna", "Best"));
