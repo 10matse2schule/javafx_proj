@@ -11,10 +11,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Alert.AlertType;
 import main.MainGraph;
-import main.model.DoublePoint;
-import main.model.Equation;
-import util.EquationUtil;
-import util.ParserUtil;
+import equation_parser.*;
 
 public class BetterGraphController {
 	
@@ -39,19 +36,21 @@ public class BetterGraphController {
 	
 	 
 	@SuppressWarnings("unused")
-	private final int FUNCTIONNAME = 102;
+	private final char FIRST_FUNCTIONNAME = 'f';
+	private char next_functionname;
+	
 	private MainGraph mainGraph;
 	private ArrayList<XYChart.Series<Number, Number>> functionList;
-	private int functionNumber;
 	
-    @FXML
+	@FXML
     private void initialize() {
-    	functionList = new ArrayList<XYChart.Series<Number, Number>>();
-    	functionNumber = FUNCTIONNAME;
-    	xAxis.setLabel("X-Axis");
+    	next_functionname = FIRST_FUNCTIONNAME;
+    	
+		functionList = new ArrayList<XYChart.Series<Number, Number>>();
+    	
+		xAxis.setLabel("X-Axis");
 		yAxis.setLabel("Y-Axis");
 		graph.setCreateSymbols(false);
-		
     }
 	
 	@FXML
@@ -66,20 +65,45 @@ public class BetterGraphController {
             return;
 		}
 		try {
-			Equation actualEquation = ParserUtil.parseEquation(equationField.getText());
-			ArrayList<DoublePoint> points = EquationUtil.generatePoints(
-					actualEquation,
-					Double.parseDouble(accField.getText()),
-					Double.parseDouble(minRangeField.getText()),
-					Double.parseDouble(maxRangeField.getText())
-					);
+			Equation equation = new Equation( equationField.getText() );
+			
+			Variable x_var = equation.add_var("x");
+			
+			if (!equation.parse()) {
+				Alert alert = new Alert(AlertType.ERROR);
+				alert.setTitle("Error");
+				alert.setHeaderText("Error in equation parsing!");
+				alert.setContentText(equation.get_error_msg());
+				alert.showAndWait();
+				return;
+				
+				//throw new Exception();
+			}
+			
+			double acc = Double.parseDouble(accField.getText());
+			double minRange = Double.parseDouble(minRangeField.getText());
+			double maxRange = Double.parseDouble(maxRangeField.getText());
+			
+			double range = maxRange -minRange;
+			long count = (long)Math.ceil(range / acc);
 			
 			XYChart.Series<Number, Number> function = new XYChart.Series<Number, Number>();
-			function.setName(Character.toString((char)functionNumber) + "(x): " + actualEquation.toString());
-			functionNumber++;
-			for(DoublePoint fp : points) {
-				System.out.println(fp.getX() + " " + fp.getY());
-				XYChart.Data<Number,Number> data = new XYChart.Data<Number,Number>(fp.getX(),fp.getY());
+			function.setName(next_functionname + "(x): " + equation.as_nice_string());
+			next_functionname++;
+			
+			final double CULL_Y = 10e20;
+			
+			for (long i=0; i<count; ++i) {
+				double x = minRange +(double)i * acc;
+				
+				x_var.set_value(x);
+				
+				double y = equation.calculate();
+				
+				if (!(y >= -CULL_Y && y <= +CULL_Y)) continue; // get rid of very large or NaN values
+				
+				//System.out.println(">> "+ x +" "+ y);
+				XYChart.Data<Number,Number> data = new XYChart.Data<Number,Number>(x,y);
 				function.getData().add(data);
 			}
 			
@@ -96,7 +120,7 @@ public class BetterGraphController {
 		//TODO Fix Draw Problem (Duplicate Problem)
 		//functionList.clear();
 		//draw();
-		functionNumber = FUNCTIONNAME;
+		next_functionname = FIRST_FUNCTIONNAME;
 		functionList.clear();
 		graph.getData().clear();
 	}
@@ -113,16 +137,16 @@ public class BetterGraphController {
 	private String checkFields() {
 		String errors = "";
 		if(equationField.getText() == null || equationField.getText().trim().isEmpty()) {
-			errors += "Unvalid Equation\n";
+			errors += "Invalid Equation\n";
 		}
 		if(accField.getText() == null || accField.getText().trim().isEmpty()) {
-			errors += "Unvalid Accuracy\n";
+			errors += "Invalid Accuracy\n";
 		}
 		if(minRangeField.getText() == null || minRangeField.getText().trim().isEmpty()) {
-			errors += "Unvalid MinRange\n";
+			errors += "Invalid MinRange\n";
 		}
 		if(maxRangeField.getText() == null || maxRangeField.getText().trim().isEmpty()) {
-			errors += "Unvalid MaxRange\n";
+			errors += "Invalid MaxRange\n";
 		}
 		try {
 			Float.parseFloat(accField.getText());
@@ -130,7 +154,7 @@ public class BetterGraphController {
 			Float.parseFloat(maxRangeField.getText());
 		}
 		catch(NumberFormatException n) {
-			errors += "Unvalid Datatypes!\n";
+			errors += "Invalid Datatypes!\n";
 		}
 		
 		return errors;

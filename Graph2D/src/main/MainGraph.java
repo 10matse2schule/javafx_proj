@@ -9,7 +9,6 @@ import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
-import main.model.Equation;
 import main.view.BetterGraphController;
 import main.view.RootLayoutController;
 
@@ -18,8 +17,6 @@ public class MainGraph extends Application {
 		
 	private Stage primaryStage;
 	private BorderPane rootLayout;
-	
-	private Equation equation;
 
 		 
 	@Override
@@ -69,18 +66,9 @@ public class MainGraph extends Application {
         }
 		
 	}
-
+	
 	public static void main(String[] args) {
 		launch(args);
 	}
-
-	public void setEquation(Equation equation) {
-		this.equation = equation;
-	}
 	
-	public Equation getEquation() {
-		return equation;
-	}
-
-
 }

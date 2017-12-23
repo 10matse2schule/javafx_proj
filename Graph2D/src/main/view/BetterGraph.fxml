@@ -15,7 +15,7 @@
       <Label layoutX="56.0" layoutY="66.0" text="X-Range:" AnchorPane.leftAnchor="300.0" AnchorPane.topAnchor="50.0" />
       <Label layoutX="56.0" layoutY="66.0" text="Accuracy: " AnchorPane.leftAnchor="480.0" AnchorPane.topAnchor="50.0" />
       <Label layoutX="419.0" layoutY="47.0" text="to" AnchorPane.leftAnchor="413.0" AnchorPane.topAnchor="50.0" />
-      <TextField fx:id="accField" layoutX="143.0" layoutY="55.0" prefWidth="40.0" text="0.1" AnchorPane.leftAnchor="550.0" AnchorPane.topAnchor="45.0" />
+      <TextField fx:id="accField" layoutX="143.0" layoutY="55.0" prefWidth="40.0" text="0.01" AnchorPane.leftAnchor="550.0" AnchorPane.topAnchor="45.0" />
       <TextField fx:id="minRangeField" layoutX="143.0" layoutY="55.0" prefWidth="40.0" text="-3" AnchorPane.leftAnchor="370.0" AnchorPane.topAnchor="45.0" />
       <TextField fx:id="maxRangeField" layoutX="436.0" layoutY="48.0" prefHeight="16.0" prefWidth="40.0" text="3" AnchorPane.leftAnchor="430.0" AnchorPane.topAnchor="45.0" />
       <ButtonBar layoutX="941.0" layoutY="38.0" prefHeight="40.0" prefWidth="200.0" AnchorPane.rightAnchor="60.0" AnchorPane.topAnchor="45.0">
