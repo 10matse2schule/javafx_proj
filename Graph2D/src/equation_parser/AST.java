@@ -8,6 +8,8 @@ class AST {
 		LITERAL		,
 		VARIABLE	,
 		
+		PARENS		,
+		
 		OP_POS		,
 		OP_NEG		,
 		OP_SQRT		,
@@ -45,20 +47,22 @@ class AST {
 	double calculate () {
 		switch (type) {
 			case LITERAL:	return value; // literal has value only calculated once on parse
-			case VARIABLE:	return var.get_value();
+			case VARIABLE:	return value = var.get_value();
 			
-			case OP_POS:	return +rhs.calculate();
-			case OP_NEG:	return -rhs.calculate();
+			case PARENS:	return value = rhs.calculate();
 			
-			case OP_SQRT:	return Math.sqrt(rhs.calculate());
-			case OP_SIN:	return Math.sin(rhs.calculate());
-			case OP_COS:	return Math.cos(rhs.calculate());
+			case OP_POS:	return value = +rhs.calculate();
+			case OP_NEG:	return value = -rhs.calculate();
 			
-			case OP_ADD:	return lhs.calculate() + rhs.calculate();
-			case OP_SUB:	return lhs.calculate() - rhs.calculate();
-			case OP_MUL:	return lhs.calculate() * rhs.calculate();
-			case OP_DIV:	return lhs.calculate() / rhs.calculate();
-			case OP_POW:	return Math.pow(lhs.calculate(), rhs.calculate());
+			case OP_SQRT:	return value = Math.sqrt(rhs.calculate());
+			case OP_SIN:	return value = Math.sin(rhs.calculate());
+			case OP_COS:	return value = Math.cos(rhs.calculate());
+			
+			case OP_ADD:	return value = lhs.calculate() + rhs.calculate();
+			case OP_SUB:	return value = lhs.calculate() - rhs.calculate();
+			case OP_MUL:	return value = lhs.calculate() * rhs.calculate();
+			case OP_DIV:	return value = lhs.calculate() / rhs.calculate();
+			case OP_POW:	return value = Math.pow(lhs.calculate(), rhs.calculate());
 			
 			default: assert(false); return 0;
 		}
@@ -66,11 +70,13 @@ class AST {
 	
 	String as_nice_string () {
 		switch (type) {
-			case LITERAL:{
+			case LITERAL: {
 				NumberFormat f = NumberFormat.getInstance(Locale.ENGLISH);
 				return f.format(value);
 			}
 			case VARIABLE:	return var.get_identifier();
+			
+			case PARENS:	return "(" +rhs.as_nice_string() +")";
 			
 			case OP_POS:	return rhs.as_nice_string(); // do not print plus sign
 			case OP_NEG:	return "-" +rhs.as_nice_string();
@@ -81,9 +87,17 @@ class AST {
 			
 			case OP_ADD:	return lhs.as_nice_string() +" +"+	rhs.as_nice_string();
 			case OP_SUB:	return lhs.as_nice_string() +" -"+	rhs.as_nice_string();
-			case OP_MUL:	return lhs.as_nice_string() +"*"+	rhs.as_nice_string(); // multiply without dot
 			case OP_DIV:	return lhs.as_nice_string() +"/"+	rhs.as_nice_string();
 			case OP_POW:	return lhs.as_nice_string() +"^"+	rhs.as_nice_string();
+			
+			case OP_MUL: {
+				String mul = "*";
+				if (	rhs.type == Type.VARIABLE ||
+						rhs.type == Type.PARENS) {
+					mul = ""; // short form
+				}
+				return lhs.as_nice_string() +mul+	rhs.as_nice_string(); // multiply without dot
+			}
 			
 			default: assert(false); return null;
 		}

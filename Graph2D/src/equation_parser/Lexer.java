@@ -12,6 +12,8 @@ public class Lexer {
 	public void reset () {
 		cur_char = new StringCharacterIterator(source_str);
 		
+		err = null;
+		
 		lex_next_token(); // next_tok becomes the first token
 	}
 	
@@ -20,11 +22,19 @@ public class Lexer {
 		reset();
 	}
 	
+	public String get_first_error () {
+		String e = err;
+		err = null;
+		return e;
+	}
+	
 // package-private Implementiation
 	final String				source_str;
 	StringCharacterIterator		cur_char;
 	
-	Token	next_tok = null;
+	Token		next_tok = null;
+	
+	String		err;
 	
 	static boolean is_digit_c (char c) {
 		return c >= '0' && c <= '9';
@@ -63,6 +73,10 @@ public class Lexer {
 						while (cur_char.current() != StringCharacterIterator.DONE && is_digit_c(cur_char.current())) cur_char.next();
 					}
 					
+					if (cur_char.current() != StringCharacterIterator.DONE && cur_char.current() == '.') {
+						if (err == null) err = "lex_next_token:: two decimal points in one number literal, interpreting as two number literals!";
+					}
+					
 					next_tok = new Token(Token.Type.LITERAL, source_str.substring(tok_begin.getIndex(), cur_char.getIndex()));
 					return;
 					
@@ -82,7 +96,7 @@ public class Lexer {
 					return;
 					
 				} else {
-					System.out.println("lex_next_token:: unknown char '"+ cur_char.current() +"'");
+					if (err == null) err = "lex_next_token:: unknown char '"+ cur_char.current() +"'";
 					
 					cur_char.next();
 				}

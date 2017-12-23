@@ -20,14 +20,14 @@ public class Equation {
 	public boolean parse () {
 		lex.reset();
 		
-		/* // debug: show all tokens
-		Lexer dbg_lex = new Lexer(lex);
-		for (;;) {
-			System.out.println("token: "+ dbg_lex.next_tok.type.toString() +" '"+ dbg_lex.next_tok.str +"'");
-			if (dbg_lex.next_tok.type == Token.Type.EOF) break;
-			dbg_lex.lex_next_token();
+		if (false) { // debug: show all tokens
+			Lexer dbg_lex = new Lexer(lex);
+			for (;;) {
+				System.out.println("token: "+ dbg_lex.next_tok.type.toString() +" '"+ dbg_lex.next_tok.str +"'");
+				if (dbg_lex.next_tok.type == Token.Type.EOF) break;
+				dbg_lex.lex_next_token();
+			}
 		}
-		*/
 		
 		ast = expression(0);
 		if (ast == null) return false;
@@ -36,11 +36,12 @@ public class Equation {
 			syntax_error();
 			return false;
 		}
+		
 		return true;
 	}
 	
-	public double calculate () {		return ast.calculate(); }
-	public String as_nice_string () {	return ast.as_nice_string(); }
+	public double	calculate () {		return ast.calculate(); }
+	public String	as_nice_string () {	return ast.as_nice_string(); }
 	
 	public String get_error_msg () {
 		return error_msg;
@@ -63,6 +64,7 @@ public class Equation {
 	
 	AST syntax_error (String msg) {
 		if (error_msg == null) error_msg = msg;
+		//System.out.println("Syntax error! "+ msg);
 		return null;
 	}
 	AST syntax_error () {
@@ -70,16 +72,23 @@ public class Equation {
 	}
 	
 	// recursive descent parser
-	Token consume () {
-		Token tmp = lex.next_tok;
-		lex.lex_next_token();
-		return tmp;
+	Token peek () {
+		return lex.next_tok;
 	}
 	Token peek (Token.Type t) {
 		if (lex.next_tok.type == t) {
 			return lex.next_tok;
 		}
 		return null;
+	}
+	Token consume () {
+		Token tmp = lex.next_tok;
+		lex.lex_next_token();
+		
+		String err;
+		if ( (err = lex.get_first_error()) != null ) syntax_error(err);
+		
+		return tmp;
 	}
 	Token accept (Token.Type t) {
 		if (lex.next_tok.type == t) {
@@ -130,18 +139,22 @@ public class Equation {
 		return op;
 	}
 	
-	AST binary_expression (AST lhs, int precedence) {
-		
-		Token op_tok = consume();
+	AST binary_expression (AST lhs, int precedence, boolean implicit_mul) {
 		
 		AST op;
-		switch (op_tok.type) {
-			case OP_PLUS:	op = new AST(AST.Type.OP_ADD);	break;
-			case OP_MINUS:	op = new AST(AST.Type.OP_SUB);	break;
-			case OP_MUL:	op = new AST(AST.Type.OP_MUL);	break;
-			case OP_DIV:	op = new AST(AST.Type.OP_DIV);	break;
-			case OP_POW:	op = new AST(AST.Type.OP_POW);	break;
-			default: assert(false); return null;
+		
+		if (implicit_mul) {
+			op = new AST(AST.Type.OP_MUL);
+		} else {
+			Token op_tok = consume();
+			switch (op_tok.type) {
+				case OP_PLUS:	op = new AST(AST.Type.OP_ADD);	break;
+				case OP_MINUS:	op = new AST(AST.Type.OP_SUB);	break;
+				case OP_MUL:	op = new AST(AST.Type.OP_MUL);	break;
+				case OP_DIV:	op = new AST(AST.Type.OP_DIV);	break;
+				case OP_POW:	op = new AST(AST.Type.OP_POW);	break;
+				default: assert(false); return null;
+			}
 		}
 		
 		op.lhs = lhs;
@@ -154,12 +167,16 @@ public class Equation {
 		
 		if (accept(Token.Type.PAREN_OPEN) == null) return null;
 		
+		AST par = new AST(AST.Type.PARENS);
+		
 		AST expr;
 		if ( (expr = expression(0)) == null ) return syntax_error();
 		
+		par.rhs = expr;
+		
 		expect(Token.Type.PAREN_CLOSE, "expected ')' after parenthesis_expression");
 		
-		return expr;
+		return par;
 	}
 	
 	AST function_expression () {
@@ -199,19 +216,27 @@ public class Equation {
 			int		recurse_precedence;
 			boolean	associativity_left = true;
 			
+			boolean implicit_mul = false;
+			
 			if (		peek(Token.Type.OP_PLUS) != null ) {
 				recurse_precedence = 1;
-			} else if (	peek(Token.Type.OP_MINUS) != null ) {
+			} else if ( peek(Token.Type.OP_MINUS) != null ) {
 				recurse_precedence = 1;
 			//
-			} else if (	peek(Token.Type.OP_MUL) != null ) {
+			} else if (	 peek(Token.Type.OP_MUL) != null ) {
 				recurse_precedence = 2;
-			} else if (	peek(Token.Type.OP_DIV) != null ) {
+			} else if (	 peek(Token.Type.OP_DIV) != null ) {
 				recurse_precedence = 2;
 			//
-			} else if (	peek(Token.Type.OP_POW) != null ) {
+			} else if (	 peek(Token.Type.OP_POW) != null ) {
 				recurse_precedence = 3;
 				associativity_left = false;
+			//
+			} else if ( peek(Token.Type.LITERAL) != null ||
+						peek(Token.Type.VARIABLE) != null ||
+						peek(Token.Type.PAREN_OPEN) != null ) {
+				recurse_precedence = 2;
+				implicit_mul = true;
 			} else {
 				break;
 			}
@@ -220,7 +245,7 @@ public class Equation {
 			
 			if (associativity_left) recurse_precedence += 1;
 			
-			if ( (expr = binary_expression(expr, recurse_precedence)) == null ) syntax_error("expected binary_expression after binary operator");
+			if ( (expr = binary_expression(expr, recurse_precedence, implicit_mul)) == null ) return syntax_error("expected binary_expression after binary operator");
 		}
 		
 		return expr;
