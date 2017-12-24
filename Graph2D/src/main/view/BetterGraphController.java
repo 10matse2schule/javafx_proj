@@ -1,8 +1,10 @@
 package main.view;
 
+import java.awt.Color;
 import java.util.ArrayList;
 
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -33,6 +35,10 @@ public class BetterGraphController {
 	private Button reset;
 	@FXML
 	private Button add;
+	@FXML
+	private TextField minYRangeField;
+	@FXML
+	private TextField maxYRangeField;
 	
 	 
 	@SuppressWarnings("unused")
@@ -41,6 +47,11 @@ public class BetterGraphController {
 	
 	private MainGraph mainGraph;
 	private ArrayList<XYChart.Series<Number, Number>> functionList;
+	
+	// sRGB luminance(Y) values
+	final double rY = 0.212655;
+	final double gY = 0.715158;
+	final double bY = 0.072187;
 	
 	@FXML
     private void initialize() {
@@ -87,53 +98,74 @@ public class BetterGraphController {
 			double range = maxRange -minRange;
 			long count = (long)Math.ceil(range / acc);
 			
+			//Generate Random Color with no too much brightness
+			Color color;
+			do {
+			color = new Color((int)(Math.random() * 0x1000000)).brighter();
+			}while(gray(color) >= 180);
+			
+			String rgb = String.format("%d, %d, %d",
+			        (int) (color.getRed()),
+			        (int) (color.getGreen()),
+			        (int) (color.getBlue()));
+			
+			ArrayList<XYChart.Series<Number, Number>> functionArray = new ArrayList<XYChart.Series<Number, Number>>();
 			XYChart.Series<Number, Number> function = new XYChart.Series<Number, Number>();
 			function.setName(next_functionname + "(x): " + equation.as_nice_string());
-			next_functionname++;
 			
-			final double CULL_Y = 10e20;
-			
+			boolean temp = false;
+			//TODO Implementation for imaginary numbers(or the real part of it)
 			for (long i=0; i<count; ++i) {
 				double x = minRange +(double)i * acc;
 				
 				x_var.set_value(x);
 				
-				double y = equation.calculate();
+				Double y = equation.calculate();
 				
-				if (!(y >= -CULL_Y && y <= +CULL_Y)) continue; // get rid of very large or NaN values
+				if(y.isNaN() || y.isInfinite()) {
+					continue;
+				}
+				if (y >= Double.parseDouble(minYRangeField.getText()) 
+					&& y <= Double.parseDouble(maxYRangeField.getText())) {
+					temp = true;
+					function.getData().add(new XYChart.Data<Number,Number>(x,y));
+				} else {
+					if(temp) {
+						functionArray.add(function);
+						function = new XYChart.Series<Number, Number>();
+						function.setName(next_functionname + "(x): " + equation.as_nice_string());
+						temp = false;
+					}
+				}
 				
 				//System.out.println(">> "+ x +" "+ y);
-				XYChart.Data<Number,Number> data = new XYChart.Data<Number,Number>(x,y);
-				function.getData().add(data);
+			}
+			if(!(function.getData().isEmpty())) {
+				functionArray.add(function);
+			}
+			graph.getData().addAll(functionArray);
+			next_functionname++;
+			for( XYChart.Series<Number, Number> actFunction:functionArray) {
+				Node line = actFunction.getNode().lookup(".chart-series-line");
+				line.setStyle("-fx-stroke: rgba(" + rgb + ", 1.0);");
+				line.applyCss();
 			}
 			
-			functionList.add(function);
+			//functionList.add(function);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 		}
-		draw();
 	}
+	
 	
 	@FXML 
 	private void handleReset() {
-		//TODO Fix Draw Problem (Duplicate Problem)
-		//functionList.clear();
-		//draw();
 		next_functionname = FIRST_FUNCTIONNAME;
-		functionList.clear();
 		graph.getData().clear();
 	}
 	
-	public void draw() {
-		//TODO Fix Draw Problem (Duplicate Problem)
-		//graph.getData().addAll(functionList);
-		if(functionList.size() > 0) {
-			graph.getData().add(functionList.get(functionList.size() -1));
-		}
-	}
-	
-	
+
 	private String checkFields() {
 		String errors = "";
 		if(equationField.getText() == null || equationField.getText().trim().isEmpty()) {
@@ -147,6 +179,12 @@ public class BetterGraphController {
 		}
 		if(maxRangeField.getText() == null || maxRangeField.getText().trim().isEmpty()) {
 			errors += "Invalid MaxRange\n";
+		}
+		if(minYRangeField.getText() == null || minYRangeField.getText().trim().isEmpty()) {
+			errors += "Unvalid MinYRange\n";
+		}
+		if(maxYRangeField.getText() == null || maxYRangeField.getText().trim().isEmpty()) {
+			errors += "Unvalid MaxYRange\n";
 		}
 		try {
 			Float.parseFloat(accField.getText());
@@ -164,6 +202,37 @@ public class BetterGraphController {
 	public void setMainGraph(MainGraph mainGraph) {
         this.mainGraph = mainGraph;
     }
+	
+	
+	
+	//Brightness Methods
+	
+	int gray(Color color) {
+		
+	    return gam_sRGB(
+	            rY*inv_gam_sRGB(color.getRed()) +
+	            gY*inv_gam_sRGB(color.getGreen()) +
+	            bY*inv_gam_sRGB(color.getBlue())
+	    );
+	}
+	
+	// Inverse of sRGB "gamma" function. (approx 2.2)
+	double inv_gam_sRGB(int ic) {
+	    double c = ic/255.0;
+	    if ( c <= 0.04045 )
+	        return c/12.92;
+	    else 
+	        return Math.pow(((c+0.055)/(1.055)),2.4);
+	}
+	
+	// sRGB "gamma" function (approx 2.2)
+	int gam_sRGB(double v) {
+	    if(v<=0.0031308)
+	        v *= 12.92;
+	    else 
+	        v = 1.055*Math.pow(v,1.0/2.4)-0.055;
+	    return (int) Math.floor((v*255+0.5)); 
+	}
 	
 	
 }

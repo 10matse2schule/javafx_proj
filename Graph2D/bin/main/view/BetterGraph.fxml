@@ -18,6 +18,8 @@
       <TextField fx:id="accField" layoutX="143.0" layoutY="55.0" prefWidth="40.0" text="0.01" AnchorPane.leftAnchor="550.0" AnchorPane.topAnchor="45.0" />
       <TextField fx:id="minRangeField" layoutX="143.0" layoutY="55.0" prefWidth="40.0" text="-3" AnchorPane.leftAnchor="370.0" AnchorPane.topAnchor="45.0" />
       <TextField fx:id="maxRangeField" layoutX="436.0" layoutY="48.0" prefHeight="16.0" prefWidth="40.0" text="3" AnchorPane.leftAnchor="430.0" AnchorPane.topAnchor="45.0" />
+      <TextField fx:id="minYRangeField" layoutX="370.0" layoutY="80.0" prefWidth="40.0" text="-3" AnchorPane.leftAnchor="370.0" AnchorPane.topAnchor="75.0" />
+      <TextField fx:id="maxYRangeField" layoutX="430.0" layoutY="72.0" prefHeight="16.0" prefWidth="40.0" text="3" AnchorPane.leftAnchor="430.0" AnchorPane.topAnchor="72.0" />
       <ButtonBar layoutX="941.0" layoutY="38.0" prefHeight="40.0" prefWidth="200.0" AnchorPane.rightAnchor="60.0" AnchorPane.topAnchor="45.0">
         <buttons>
           <Button fx:id="reset" mnemonicParsing="false" onAction="#handleReset" text="Reset" />
