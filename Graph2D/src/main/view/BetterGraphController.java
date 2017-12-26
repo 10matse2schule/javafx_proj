@@ -3,6 +3,7 @@ package main.view;
 import java.awt.Color;
 import java.util.ArrayList;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
@@ -11,6 +12,7 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.control.Alert.AlertType;
 import main.MainGraph;
 import equation_parser.*;
@@ -48,6 +50,8 @@ public class BetterGraphController {
 	private MainGraph mainGraph;
 	private ArrayList<XYChart.Series<Number, Number>> functionList;
 	
+	private boolean scrolling = false;
+	
 	// sRGB luminance(Y) values
 	final double rY = 0.212655;
 	final double gY = 0.715158;
@@ -62,6 +66,7 @@ public class BetterGraphController {
 		xAxis.setLabel("X-Axis");
 		yAxis.setLabel("Y-Axis");
 		graph.setCreateSymbols(false);
+		addMouseScrolling();
     }
 	
 	@FXML
@@ -164,6 +169,86 @@ public class BetterGraphController {
 		next_functionname = FIRST_FUNCTIONNAME;
 		graph.getData().clear();
 	}
+	
+	@FXML 
+	private void handleScroll() {
+		System.out.println("Servus");
+	}
+	
+	/**
+	 * EventListener setup for scrolling
+	 * ###Warning###
+	 * Can't handle multiple equations yet
+	 * Not much tested either
+	 * ###Warning###
+	 */
+	public void addMouseScrolling() {
+		graph.setOnScroll((ScrollEvent event) -> {
+			String possibleErrors = checkFields();
+			if(!(possibleErrors.equals(""))) {
+				//Could add an error message but its nicer just to disable scrolling if the input is invalid
+				
+				
+//				Alert alert = new Alert(AlertType.ERROR);
+//	            alert.setTitle("Error");
+//	            alert.setHeaderText("Some of your fields are invalid!");
+//	            alert.setContentText(possibleErrors);
+//	            alert.showAndWait();
+	            return;
+			}
+			
+			//Calculate Scrolling direction
+			//Normally one scroll up or down is +/-40
+			double deltaY = event.getDeltaY();
+			deltaY /= -40;
+			//Calculate new ranges for the textfields
+			double newMinRangeX = Double.parseDouble(minRangeField.getText()) - deltaY;
+			double newMaxRangeX = Double.parseDouble(maxRangeField.getText()) + deltaY;
+			double newMinRangeY = Double.parseDouble(minRangeField.getText()) - deltaY;
+			double newMaxRangeY = Double.parseDouble(maxRangeField.getText()) + deltaY;
+			
+			//Check that new Ranges don't overlap
+			if(newMinRangeX >= newMaxRangeX) {
+				return;
+			}
+			if(newMinRangeY >= newMaxRangeY) {
+				return;
+			}
+			//Set new ranges
+			minRangeField.setText(""+newMinRangeX);
+			maxRangeField.setText(""+newMaxRangeX);
+			minYRangeField.setText(""+newMinRangeX);
+			maxYRangeField.setText(""+newMaxRangeY);
+			
+			//Thread for checking if the user is still scrolling
+			//Current update rate is 4Hz(1/250ms)
+			//Better checking method would be better just for debugging purposes
+			scrolling = true;
+            Thread th = new Thread(() -> {
+                try {
+                    Thread.sleep(250);
+                    Platform.runLater(() -> {
+                        if(scrolling) {
+                        	graph.setAnimated(false);
+                        	handleReset();
+                        	handleAdd();
+                        	graph.setAnimated(true);
+                        }
+                        scrolling = false;
+                    });
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            });
+            th.setDaemon(true);
+            th.start();
+        });
+	}
+	
+	
+	
+	
+
 	
 
 	private String checkFields() {
