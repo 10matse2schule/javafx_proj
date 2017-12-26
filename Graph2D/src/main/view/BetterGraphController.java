@@ -15,6 +15,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.control.Alert.AlertType;
 import main.MainGraph;
+import model.Function;
 import equation_parser.*;
 
 public class BetterGraphController {
@@ -48,7 +49,7 @@ public class BetterGraphController {
 	private char next_functionname;
 	
 	private MainGraph mainGraph;
-	private ArrayList<XYChart.Series<Number, Number>> functionList;
+	private ArrayList<Function> functionList;
 	
 	private boolean scrolling = false;
 	
@@ -61,7 +62,7 @@ public class BetterGraphController {
     private void initialize() {
     	next_functionname = FIRST_FUNCTIONNAME;
     	
-		functionList = new ArrayList<XYChart.Series<Number, Number>>();
+		functionList = new ArrayList<Function>();
     	
 		xAxis.setLabel("X-Axis");
 		yAxis.setLabel("Y-Axis");
@@ -80,8 +81,20 @@ public class BetterGraphController {
             alert.showAndWait();
             return;
 		}
+		String eq = equationField.getText();
+		//Generate Random Color with no too much brightness
+		Color color;
+		do {
+		color = new Color((int)(Math.random() * 0x1000000)).brighter();
+		}while(gray(color) >= 180);
+		
+		addEquation(new Function(eq,color));
+		functionList.add(new Function(eq,color));
+	}
+	
+	private void addEquation(Function func) {
 		try {
-			Equation equation = new Equation( equationField.getText() );
+			Equation equation = new Equation( func.getFunction() );
 			
 			Variable x_var = equation.add_var("x");
 			
@@ -103,20 +116,14 @@ public class BetterGraphController {
 			double range = maxRange -minRange;
 			long count = (long)Math.ceil(range / acc);
 			
-			//Generate Random Color with no too much brightness
-			Color color;
-			do {
-			color = new Color((int)(Math.random() * 0x1000000)).brighter();
-			}while(gray(color) >= 180);
-			
+			ArrayList<XYChart.Series<Number, Number>> functionArray = new ArrayList<XYChart.Series<Number, Number>>();
+			XYChart.Series<Number, Number> function = new XYChart.Series<Number, Number>();
+			function.setName(next_functionname + "(x): " + equation.as_nice_string());
+			Color color = func.getColor();
 			String rgb = String.format("%d, %d, %d",
 			        (int) (color.getRed()),
 			        (int) (color.getGreen()),
 			        (int) (color.getBlue()));
-			
-			ArrayList<XYChart.Series<Number, Number>> functionArray = new ArrayList<XYChart.Series<Number, Number>>();
-			XYChart.Series<Number, Number> function = new XYChart.Series<Number, Number>();
-			function.setName(next_functionname + "(x): " + equation.as_nice_string());
 			
 			boolean temp = false;
 			//TODO Implementation for imaginary numbers(or the real part of it)
@@ -168,6 +175,7 @@ public class BetterGraphController {
 	private void handleReset() {
 		next_functionname = FIRST_FUNCTIONNAME;
 		graph.getData().clear();
+		functionList.clear();
 	}
 	
 	@FXML 
@@ -178,8 +186,9 @@ public class BetterGraphController {
 	/**
 	 * EventListener setup for scrolling
 	 * ###Warning###
-	 * Can't handle multiple equations yet
 	 * Not much tested either
+	 * Needs better scaling for acc
+	 * Needs function for scaling the scroll values so that the value isnt fixed to a certain value
 	 * ###Warning###
 	 */
 	public void addMouseScrolling() {
@@ -207,6 +216,9 @@ public class BetterGraphController {
 			double newMinRangeY = Double.parseDouble(minRangeField.getText()) - deltaY;
 			double newMaxRangeY = Double.parseDouble(maxRangeField.getText()) + deltaY;
 			
+			//Need function for scaling
+			//Gets worse for higher numbers
+			double newAcc = Double.parseDouble(accField.getText()) + (deltaY/150);
 			//Check that new Ranges don't overlap
 			if(newMinRangeX >= newMaxRangeX) {
 				return;
@@ -219,6 +231,7 @@ public class BetterGraphController {
 			maxRangeField.setText(""+newMaxRangeX);
 			minYRangeField.setText(""+newMinRangeX);
 			maxYRangeField.setText(""+newMaxRangeY);
+			accField.setText(""+newAcc);
 			
 			//Thread for checking if the user is still scrolling
 			//Current update rate is 4Hz(1/250ms)
@@ -230,8 +243,11 @@ public class BetterGraphController {
                     Platform.runLater(() -> {
                         if(scrolling) {
                         	graph.setAnimated(false);
-                        	handleReset();
-                        	handleAdd();
+                        	next_functionname = FIRST_FUNCTIONNAME;
+                    		graph.getData().clear();
+                        	for(Function function : functionList) {
+                        		addEquation(function);
+                        	}
                         	graph.setAnimated(true);
                         }
                         scrolling = false;
